@@ -1,5 +1,3 @@
-// js/main.js
-
 const gameArea = document.getElementById("gameArea");
 const player = document.getElementById("player");
 const timeSpan = document.getElementById("time");
@@ -11,56 +9,79 @@ const restartBtn = document.getElementById("restartBtn");
 
 let gameWidth = gameArea.clientWidth;
 let gameHeight = gameArea.clientHeight;
-let currentWorld = 1; // 1 = grass, 2 = ice
 
-// 플레이어 위치
+// 발판 DOM 목록과 땅 높이 (CSS .ground height와 맞추기)
+const platforms = Array.from(document.querySelectorAll(".platform"));
+const GROUND_HEIGHT = 60; // style.css의 .ground height 값과 동일해야 합니다
+
+// 플레이어 위치 및 이동 속도
 let playerX = 180;
-let playerY = 520;
-let playerSpeed = 5;
+let playerY = 320;
+let playerSpeed = 4;
 
-// 키 입력 상태
+// 중력·점프 관련 변수
+let velY = 0;
+const GRAVITY = 0.6;
+const JUMP_POWER = -11;
+let onGround = false;
+let jumpPressed = false;
+
+// 좌우 입력
 let leftPressed = false;
 let rightPressed = false;
-let upPressed = false;
-let downPressed = false;
 
 // 적, 아이템
 let enemies = [];
 let items = [];
 
-// 스폰 타이밍
+// 스폰 타이머
 let enemySpawnInterval = 800;
 let lastEnemySpawn = 0;
 
-let itemSpawnInterval = 2500; // 2.5초마다 한 번 정도
+let itemSpawnInterval = 2500;
 let lastItemSpawn = 0;
 
-// 난이도 보정
-let globalSpeedBonus = 0;
-
-// 점수, 시간, 하트, 코인
+// 점수, 코인, 목숨
 let score = 0;
 let coins = 0;
 const maxLives = 3;
 let lives = maxLives;
 
+// 시간
 let startTime = 0;
 let lastTimeStamp = 0;
 let isGameOver = false;
 
-// 키보드 이벤트
+// 키 입력 처리
 document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") leftPressed = true;
-    if (e.key === "ArrowRight") rightPressed = true;
-    if (e.key === "ArrowUp") upPressed = true;
-    if (e.key === "ArrowDown") downPressed = true;
+    if (e.key === "ArrowLeft") {
+        leftPressed = true;
+    }
+    if (e.key === "ArrowRight") {
+        rightPressed = true;
+    }
+
+    // 점프: ↑ 또는 Space
+    if ((e.key === "ArrowUp" || e.key === " ") && !jumpPressed) {
+        jumpPressed = true;
+        if (onGround) {
+            velY = JUMP_POWER;
+            onGround = false;
+            player.classList.add("jump");
+        }
+    }
 });
 
 document.addEventListener("keyup", (e) => {
-    if (e.key === "ArrowLeft") leftPressed = false;
-    if (e.key === "ArrowRight") rightPressed = false;
-    if (e.key === "ArrowUp") upPressed = false;
-    if (e.key === "ArrowDown") downPressed = false;
+    if (e.key === "ArrowLeft") {
+        leftPressed = false;
+    }
+    if (e.key === "ArrowRight") {
+        rightPressed = false;
+    }
+    if (e.key === "ArrowUp" || e.key === " ") {
+        jumpPressed = false;
+    }
 });
 
 // HUD 업데이트
@@ -76,8 +97,7 @@ function spawnEnemy() {
     enemy.classList.add("enemy");
 
     const enemyWidth = 40;
-    const maxX = gameWidth - enemyWidth;
-    const randomX = Math.floor(Math.random() * (maxX + 1));
+    const randomX = Math.floor(Math.random() * (gameWidth - enemyWidth));
 
     enemy.style.left = randomX + "px";
     enemy.style.top = "-40px";
@@ -87,25 +107,20 @@ function spawnEnemy() {
         el: enemy,
         x: randomX,
         y: -40,
-        speed: 3 + Math.random() * 2 + globalSpeedBonus,
+        speed: 3 + Math.random() * 2,
     });
 }
 
-// 아이템 생성 (코인, 하트 랜덤)
+// 아이템 생성
 function spawnItem() {
     const item = document.createElement("div");
     item.classList.add("item");
 
-    const type = Math.random() < 0.7 ? "coin" : "heart"; // 70% 코인, 30% 하트
-    if (type === "coin") {
-        item.classList.add("item-coin");
-    } else {
-        item.classList.add("item-heart");
-    }
+    const type = Math.random() < 0.7 ? "coin" : "heart";
+    item.classList.add(type === "coin" ? "item-coin" : "item-heart");
 
     const itemWidth = 32;
-    const maxX = gameWidth - itemWidth;
-    const randomX = Math.floor(Math.random() * (maxX + 1));
+    const randomX = Math.floor(Math.random() * (gameWidth - itemWidth));
 
     item.style.left = randomX + "px";
     item.style.top = "-32px";
@@ -120,7 +135,6 @@ function spawnItem() {
     });
 }
 
-// 사각형 충돌 체크
 function isColliding(a, b) {
     return !(
         a.right < b.left ||
@@ -130,14 +144,53 @@ function isColliding(a, b) {
     );
 }
 
-// 월드 전환 체크 (월드1 -> 월드2)
-function checkWorldChange() {
-    // 예시: 점수 20 이상이면 얼음 월드로 변경
-    if (currentWorld === 1 && score >= 20) {
-        currentWorld = 2;
-        gameArea.classList.remove("world1");
-        gameArea.classList.add("world2");
-        statusSpan.textContent = "월드 2 ❄ 얼음 스테이지";
+// 땅·발판 충돌 처리
+function applyPlatformCollision() {
+    const playerRect = player.getBoundingClientRect();
+    const gameRect = gameArea.getBoundingClientRect();
+
+    const playerBottom = playerRect.bottom - gameRect.top;
+    const playerTop = playerRect.top - gameRect.top;
+    const playerLeft = playerRect.left - gameRect.left;
+    const playerRight = playerRect.right - gameRect.left;
+    const playerHeight = playerRect.height;
+
+    onGround = false;
+
+    // ground 충돌
+    const groundTop = gameHeight - GROUND_HEIGHT;
+    if (velY >= 0 && playerBottom >= groundTop && playerTop < groundTop) {
+        velY = 0;
+        onGround = true;
+        playerY = groundTop - playerHeight;
+    }
+
+    // 각 발판과 충돌
+    platforms.forEach((pf) => {
+        const r = pf.getBoundingClientRect();
+        const gameR = gameRect;
+
+        const platLeft = r.left - gameR.left;
+        const platRight = r.right - gameR.left;
+        const platTop = r.top - gameR.top;
+
+        const isInXRange = playerRight > platLeft && playerLeft < platRight;
+
+        if (
+            isInXRange &&
+            velY >= 0 &&
+            playerBottom >= platTop &&
+            playerTop < platTop
+        ) {
+            velY = 0;
+            onGround = true;
+            playerY = platTop - playerHeight;
+        }
+    });
+
+    // 착지하면 jump 클래스 제거
+    if (onGround) {
+        player.classList.remove("jump");
     }
 }
 
@@ -149,25 +202,25 @@ function resetGame() {
     items = [];
 
     playerX = 180;
-    playerY = 520;
+    playerY = 320;
+    velY = 0;
+    onGround = false;
+    jumpPressed = false;
+
     score = 0;
     coins = 0;
     lives = maxLives;
     enemySpawnInterval = 800;
     lastEnemySpawn = 0;
     lastItemSpawn = 0;
-    globalSpeedBonus = 0;
     isGameOver = false;
     startTime = 0;
     lastTimeStamp = 0;
 
-    // 월드1으로 초기화
-    currentWorld = 1;
-    gameArea.classList.remove("world2");
-    gameArea.classList.add("world1");
-
     player.style.left = playerX + "px";
     player.style.top = playerY + "px";
+    player.classList.remove("walk-left", "walk-right", "jump");
+
     statusSpan.textContent = "게임 중";
     statusSpan.style.color = "#0066cc";
 
@@ -175,34 +228,51 @@ function resetGame() {
     requestAnimationFrame(gameLoop);
 }
 
-// 메인 루프
 function gameLoop(timestamp) {
     if (isGameOver) return;
 
     if (!startTime) startTime = timestamp;
-    const delta = timestamp - lastTimeStamp;
-    lastTimeStamp = timestamp;
-
     const elapsed = (timestamp - startTime) / 1000;
     timeSpan.textContent = elapsed.toFixed(1);
 
-    // 난이도: 시간이 지날수록 빠르게
-    enemySpawnInterval = 800 - Math.min(500, elapsed * 20);
-    globalSpeedBonus = Math.min(3, elapsed / 10);
+    // 좌우 이동
+    if (leftPressed) {
+        playerX -= playerSpeed;
+        player.classList.remove("walk-right");
+        player.classList.add("walk-left");
+    } else if (rightPressed) {
+        playerX += playerSpeed;
+        player.classList.remove("walk-left");
+        player.classList.add("walk-right");
+    } else {
+        // 좌우 키를 떼면 방향 클래스 제거
+        player.classList.remove("walk-left", "walk-right");
+    }
 
-    // 플레이어 이동
-    if (leftPressed) playerX -= playerSpeed;
-    if (rightPressed) playerX += playerSpeed;
-    if (upPressed) playerY -= playerSpeed;
-    if (downPressed) playerY += playerSpeed;
+    // 화면 밖 X축 제한
+    const pw = player.clientWidth;
+    const ph = player.clientHeight;
 
-    const playerWidth = player.clientWidth;
-    const playerHeight = player.clientHeight;
     if (playerX < 0) playerX = 0;
-    if (playerX > gameWidth - playerWidth) playerX = gameWidth - playerWidth;
-    if (playerY < 0) playerY = 0;
-    if (playerY > gameHeight - playerHeight) {
-        playerY = gameHeight - playerHeight;
+    if (playerX > gameWidth - pw) playerX = gameWidth - pw;
+
+    // 중력 적용
+    velY += GRAVITY;
+    playerY += velY;
+
+    // 땅·발판 충돌 적용
+    applyPlatformCollision();
+
+    // Y축 상단 제한
+    if (playerY < 0) {
+        playerY = 0;
+        if (velY < 0) velY = 0;
+    }
+    // 혹시라도 바닥 아래로 떨어지는 것 방지
+    if (playerY > gameHeight - ph) {
+        playerY = gameHeight - ph;
+        velY = 0;
+        onGround = true;
     }
 
     player.style.left = playerX + "px";
@@ -230,7 +300,7 @@ function gameLoop(timestamp) {
         bottom: playerRect.bottom - gameRect.top,
     };
 
-    // 적 이동 및 충돌
+    // 적 이동 및 충돌 체크
     const nextEnemies = [];
     enemies.forEach((enemyObj) => {
         enemyObj.y += enemyObj.speed;
@@ -238,26 +308,25 @@ function gameLoop(timestamp) {
 
         if (enemyObj.y > gameHeight) {
             enemyObj.el.remove();
-            score += 1; // 화면 밖으로 나가면 점수
+            score += 1;
             updateHUD();
             return;
         }
 
-        const enemyRect = enemyObj.el.getBoundingClientRect();
-        const enemyBox = {
-            left: enemyRect.left - gameRect.left,
-            right: enemyRect.right - gameRect.left,
-            top: enemyRect.top - gameRect.top,
-            bottom: enemyRect.bottom - gameRect.top,
+        const rect = enemyObj.el.getBoundingClientRect();
+        const box = {
+            left: rect.left - gameRect.left,
+            right: rect.right - gameRect.left,
+            top: rect.top - gameRect.top,
+            bottom: rect.bottom - gameRect.top,
         };
 
-        if (isColliding(playerBox, enemyBox)) {
+        if (isColliding(playerBox, box)) {
             enemyObj.el.remove();
             lives -= 1;
-            if (lives < 0) lives = 0;
             updateHUD();
 
-            if (lives === 0) {
+            if (lives <= 0) {
                 gameOver();
                 return;
             }
@@ -268,7 +337,7 @@ function gameLoop(timestamp) {
     });
     enemies = nextEnemies;
 
-    // 아이템 이동 및 충돌
+    // 아이템 이동 / 충돌
     const nextItems = [];
     items.forEach((itemObj) => {
         itemObj.y += itemObj.speed;
@@ -279,22 +348,21 @@ function gameLoop(timestamp) {
             return;
         }
 
-        const itemRect = itemObj.el.getBoundingClientRect();
-        const itemBox = {
-            left: itemRect.left - gameRect.left,
-            right: itemRect.right - gameRect.left,
-            top: itemRect.top - gameRect.top,
-            bottom: itemRect.bottom - gameRect.top,
+        const rect = itemObj.el.getBoundingClientRect();
+        const box = {
+            left: rect.left - gameRect.left,
+            right: rect.right - gameRect.left,
+            top: rect.top - gameRect.top,
+            bottom: rect.bottom - gameRect.top,
         };
 
-        if (isColliding(playerBox, itemBox)) {
+        if (isColliding(playerBox, box)) {
             if (itemObj.type === "coin") {
-                coins += 1;
-            } else if (itemObj.type === "heart") {
-                if (lives < maxLives) {
-                    lives += 1;
-                }
+                coins++;
+            } else if (itemObj.type === "heart" && lives < maxLives) {
+                lives++;
             }
+
             itemObj.el.remove();
             updateHUD();
             return;
@@ -304,10 +372,7 @@ function gameLoop(timestamp) {
     });
     items = nextItems;
 
-    // 점수에 따라 월드 전환
-    checkWorldChange();
-
-    if (!isGameOver) requestAnimationFrame(gameLoop);
+    requestAnimationFrame(gameLoop);
 }
 
 function gameOver() {
@@ -316,9 +381,6 @@ function gameOver() {
     statusSpan.style.color = "#e74c3c";
 }
 
-restartBtn.addEventListener("click", () => {
-    resetGame();
-});
+restartBtn.addEventListener("click", resetGame);
 
-// 게임 시작
 resetGame();

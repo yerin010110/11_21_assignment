@@ -22,12 +22,22 @@
 
         <!-- 게임 화면 -->
         <div id="gameArea" class="world1">
-            <!-- enemy, item 은 JS에서 생성 -->
+            <!-- 땅 -->
+            <div class="ground"></div>
+
+            <!-- 발판들 -->
+            <div class="platform p1"></div>
+            <div class="platform p2"></div>
+
+            <!-- 플레이어 -->
             <div id="player"></div>
         </div>
 
         <div class="help">
-            <p>방향키(↑ ↓ ← →)로 마리오를 움직여 떨어지는 적을 피하세요.</p>
+            <p>
+                ← → 로 이동하고 ↑(또는 Space)로 점프해서 떨어지는 적을 피하세요.
+            </p>
+
             <p>
                 노란 코인을 먹으면 코인이 증가하고, 하트를 먹으면 목숨이
                 회복됩니다.
