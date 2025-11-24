@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Falling Blocks 피하기 게임</title>
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+
+    <!-- 점수 및 상태 표시 영역 -->
+    <body>
+        <h1 class="game-title">Falling Mario Mini Game</h1>
+
+        <!-- HUD 영역 -->
+        <div class="hud">
+            <span>시간: <span id="time">0.0</span>초</span>
+            <span>피한 블록: <span id="score">0</span>개</span>
+            <span>코인: <span id="coinCount">0</span>개</span>
+            <span>목숨: <span id="livesView">❤❤❤</span></span>
+            <span id="status">게임 중</span>
+        </div>
+
+        <!-- 게임 화면 -->
+        <div id="gameArea" class="world1">
+            <!-- enemy, item 은 JS에서 생성 -->
+            <div id="player"></div>
+        </div>
+
+        <div class="help">
+            <p>방향키(↑ ↓ ← →)로 마리오를 움직여 떨어지는 적을 피하세요.</p>
+            <p>
+                노란 코인을 먹으면 코인이 증가하고, 하트를 먹으면 목숨이
+                회복됩니다.
+            </p>
+            <button id="restartBtn">다시 시작</button>
+        </div>
+
+        <script src="js/main.js"></script>
+    </body>
+</html>

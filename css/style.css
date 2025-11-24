@@ -1,0 +1,93 @@
+/* 전체 폰트 및 기본 스타일 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f5f7fa;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+
+.game-title {
+    margin-bottom: 12px;
+}
+
+.hud {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+#status {
+    color: #0066cc;
+}
+
+/* 게임 영역 */
+/* 공통 스타일 */
+#gameArea {
+    position: relative;
+    width: 400px;
+    height: 600px;
+    margin: 0 auto;
+    border: 2px solid #000;
+    overflow: hidden;
+}
+
+/* 월드1  grass 스테이지 */
+#gameArea.world1 {
+    background-image: url("../img/bg_world1.png");
+    background-size: cover; /* 배경 꽉 채우기 */
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* 월드2  ice 스테이지 */
+#gameArea.world2 {
+    background-image: url("../img/bg_world2_snow.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* 플레이어(마리오 캐릭터) */
+#player {
+    position: absolute;
+    width: 48px; /* 캐릭터 크기 적당히 조정 */
+    height: 48px;
+    background-image: url("../img/mario.png");
+    background-size: cover; /* 이미지가 박스에 꽉 차도록 */
+    background-position: center;
+    bottom: 20px;
+    left: 180px;
+}
+
+/* 적(빨간색 블록) */
+.enemy {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: #e74c3c;
+    top: -40px; /* 처음 생성 시 화면 위에서 시작 */
+    border-radius: 4px;
+}
+
+/* 설명 / 버튼 */
+.help {
+    margin-top: 10px;
+}
+
+#restartBtn {
+    margin-top: 6px;
+    padding: 6px 14px;
+    border: none;
+    background: #0077b6;
+    color: #fff;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#restartBtn:hover {
+    opacity: 0.9;
+}
