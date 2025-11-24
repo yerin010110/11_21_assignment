@@ -32,7 +32,7 @@ let items = [];
 let enemySpawnInterval = 800;
 let lastEnemySpawn = 0;
 
-let itemSpawnInterval = 2500; // 2 5초마다 한 번 정도
+let itemSpawnInterval = 2500; // 2.5초마다 한 번 정도
 let lastItemSpawn = 0;
 
 // 난이도 보정
@@ -130,6 +130,17 @@ function isColliding(a, b) {
     );
 }
 
+// 월드 전환 체크 (월드1 -> 월드2)
+function checkWorldChange() {
+    // 예시: 점수 20 이상이면 얼음 월드로 변경
+    if (currentWorld === 1 && score >= 20) {
+        currentWorld = 2;
+        gameArea.classList.remove("world1");
+        gameArea.classList.add("world2");
+        statusSpan.textContent = "월드 2 ❄ 얼음 스테이지";
+    }
+}
+
 // 게임 초기화
 function resetGame() {
     enemies.forEach((e) => e.el.remove());
@@ -149,6 +160,11 @@ function resetGame() {
     isGameOver = false;
     startTime = 0;
     lastTimeStamp = 0;
+
+    // 월드1으로 초기화
+    currentWorld = 1;
+    gameArea.classList.remove("world2");
+    gameArea.classList.add("world1");
 
     player.style.left = playerX + "px";
     player.style.top = playerY + "px";
@@ -185,8 +201,9 @@ function gameLoop(timestamp) {
     if (playerX < 0) playerX = 0;
     if (playerX > gameWidth - playerWidth) playerX = gameWidth - playerWidth;
     if (playerY < 0) playerY = 0;
-    if (playerY > gameHeight - playerHeight)
+    if (playerY > gameHeight - playerHeight) {
         playerY = gameHeight - playerHeight;
+    }
 
     player.style.left = playerX + "px";
     player.style.top = playerY + "px";
@@ -287,6 +304,9 @@ function gameLoop(timestamp) {
     });
     items = nextItems;
 
+    // 점수에 따라 월드 전환
+    checkWorldChange();
+
     if (!isGameOver) requestAnimationFrame(gameLoop);
 }
 
@@ -300,4 +320,5 @@ restartBtn.addEventListener("click", () => {
     resetGame();
 });
 
+// 게임 시작
 resetGame();
